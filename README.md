@@ -1,1 +1,1 @@
-# software-metrics-reduction
+# Scripts for metrics collection
