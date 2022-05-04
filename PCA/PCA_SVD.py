@@ -20,40 +20,36 @@ def svd(data, comps, initial_feature_names):
     model.transform(data)
     # print(model.explained_variance_ratio_)
 
-    # get number of components that explain 95% of variance
-    ex_var = 0
-    count = 0
-    for i in model.explained_variance_ratio_:
-        if ex_var >= 0.95:
-            break
-        ex_var += i
-        count += 1
-    print(ex_var)
-    print(count)
+    # get variance for all components
+    variance = [sum(model.explained_variance_ratio_[:i]*100) for i in range(1, len(model.explained_variance_ratio_) + 1)]
 
     # get the index of the most important feature on EACH component
     # LIST COMPREHENSION HERE
-    most_important = [np.abs(model.components_[i]).argmax() for i in range(count)]
+    most_important = [np.abs(model.components_[i]).argmax() for i in range(len(model.explained_variance_ratio_))]
 
     # get the names
-    most_important_names = [initial_feature_names[most_important[i]] for i in range(count)]
-    return most_important_names
+    most_important_names = [initial_feature_names[most_important[i]] for i in range(len(model.explained_variance_ratio_))]
+    return most_important_names, variance
 
 
 # save results as a table
-def interpret_results(initial_names, xlsx_filename, result_names):
+def interpret_results(initial_names, xlsx_filename, result_names, variance):
     wb = load_workbook(xlsx_filename)
     sheet = wb.active
     sheet.cell(1, 1, 'Number of metrics')
+    sheet.cell(1, 2, 'Variance explained')
 
     for i in range(len(initial_names)):
-        sheet.cell(1, i + 2, initial_names[i])
+        sheet.cell(1, i + 3, initial_names[i])
     for i in range(len(result_names)):
         sheet.cell(i+2, 1, i+1)
+        sheet.cell(i+2, 2, variance[i])
         for c in range(len(initial_names)):
             if initial_names[c] == result_names[i]:
                 for j in range(i, len(result_names)):
-                    sheet.cell(j+2, c+2, 1)
+                    if not sheet.cell(j+2, c+3).value:
+                        sheet.cell(j + 2, c + 3, 0)
+                    sheet.cell(j+2, c+3, int(sheet.cell(j+2, c+3).value)+1)
 
     wb.save(xlsx_filename)
 
@@ -72,12 +68,9 @@ def main():
 
     components = len(initial_feature_names)
 
-    names = svd(data, components-1, initial_feature_names)
-    names = list(dict.fromkeys(names))
+    names, variance = svd(data, components-1, initial_feature_names)
 
-    print(len(names), names)
-
-    # interpret_results(initial_feature_names, 'results/SVD_results_49.xlsx', names)
+    interpret_results(initial_feature_names, 'results/SVD_results_49.xlsx', names, variance)
 
 
 main()

@@ -24,35 +24,36 @@ def pca(data, initial_feature_names):
     sorted_eigenvalue = eigen_vals[sorted_index]
     sorted_eigenvectors = eigen_vecs[:, sorted_index]
 
-    # get number of components that explain 95% of variance
+    # get the variance of all components
     variance_explained = []
-    count = 0
     for i in sorted_eigenvalue:
-        if sum(variance_explained) >= 95:
-            break
         variance_explained.append((i / sum(sorted_eigenvalue)) * 100)
-        count += 1
+    variance = [sum(variance_explained[:i]) for i in range(1, len(variance_explained)+1)]
 
     # get most important feature from each component
-    most_important = [np.abs(sorted_eigenvectors[i]).argmax() for i in range(count)]
-    most_important_names = [initial_feature_names[i] for i in most_important[:count]]
-    return most_important_names
+    most_important = [np.abs(sorted_eigenvectors[i]).argmax() for i in range(len(sorted_eigenvectors))]
+    most_important_names = [initial_feature_names[i] for i in most_important[:len(sorted_eigenvectors)]]
+    return most_important_names, variance
 
 
 # save results as a table
-def interpret_results(initial_names, xlsx_filename, result_names):
+def interpret_results(initial_names, xlsx_filename, result_names, variance):
     wb = load_workbook(xlsx_filename)
     sheet = wb.active
     sheet.cell(1, 1, 'Number of metrics')
+    sheet.cell(1, 2, 'Variance explained')
 
     for i in range(len(initial_names)):
-        sheet.cell(1, i + 2, initial_names[i])
+        sheet.cell(1, i + 3, initial_names[i])
     for i in range(len(result_names)):
         sheet.cell(i+2, 1, i+1)
+        sheet.cell(i+2, 2, variance[i])
         for c in range(len(initial_names)):
             if initial_names[c] == result_names[i]:
                 for j in range(i, len(result_names)):
-                    sheet.cell(j+2, c+2, 1)
+                    if not sheet.cell(j+2, c+3).value:
+                        sheet.cell(j + 2, c + 3, 0)
+                    sheet.cell(j+2, c+3, int(sheet.cell(j+2, c+3).value)+1)
 
     wb.save(xlsx_filename)
 
@@ -69,11 +70,9 @@ def main():
     initial_feature_names = [d for d in data]
     data = normalize(data)
 
-    names = pca(data, initial_feature_names)
-    names = list(dict.fromkeys(names))
-    print(len(names), names)
+    names, variance = pca(data, initial_feature_names)
 
-    # interpret_results(initial_feature_names, 'results/PCA_results_49.xlsx', names)
+    interpret_results(initial_feature_names, 'results/PCA_results_49.xlsx', names, variance)
 
 
 main()

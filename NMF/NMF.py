@@ -21,36 +21,34 @@ def get_score(model, data, scorer=metrics.explained_variance_score):
 
 # singular value decomposition
 def nmf(data, comps, initial_feature_names):
-    count = 0
-    for i in range(2, comps):
-        model = NMF(n_components=i, init='nndsvd', max_iter=500).fit(data)
-        if get_score(model, data) >= 0.95:
-            count = i
-            print(count)
-            break
+    model = NMF(n_components=comps, init='nndsvd', max_iter=500).fit(data)
 
     # get the index of the most important feature on EACH component
-    most_important = [np.abs(model.components_[i]).argmax() for i in range(count)]
+    most_important = [np.abs(model.components_[i]).argmax() for i in range(comps)]
 
     # get the names
-    most_important_names = [initial_feature_names[most_important[i]] for i in range(count)]
-    return most_important_names
+    most_important_names = [initial_feature_names[most_important[i]] for i in range(comps)]
+    return most_important_names, get_score(model, data)*100
 
 
 # save results as a table
-def interpret_results(initial_names, xlsx_filename, result_names):
+def interpret_results(initial_names, xlsx_filename, result_names, variance):
     wb = load_workbook(xlsx_filename)
     sheet = wb.active
     sheet.cell(1, 1, 'Number of metrics')
+    sheet.cell(1, 2, 'Variance explained')
 
     for i in range(len(initial_names)):
-        sheet.cell(1, i + 2, initial_names[i])
+        sheet.cell(1, i + 3, initial_names[i])
     for i in range(len(result_names)):
         sheet.cell(i+2, 1, i+1)
-        for c in range(len(initial_names)):
-            if initial_names[c] == result_names[i]:
-                for j in range(i, len(result_names)):
-                    sheet.cell(j+2, c+2, 1)
+        sheet.cell(i+2, 2, variance[i])
+        for r in result_names[i]:
+            for c in range(len(initial_names)):
+                if initial_names[c] == r:
+                    if not sheet.cell(i+2, c+3).value:
+                        sheet.cell(i + 2, c + 3, 0)
+                    sheet.cell(i+2, c+3, int(sheet.cell(i+2, c+3).value)+1)
 
     wb.save(xlsx_filename)
 
@@ -66,15 +64,14 @@ def main():
         data[i] = data[i].astype(float)
     initial_feature_names = [d for d in data]
     data = normalize(data)
+    names = []
+    variance = []
+    for i in range(1, len(initial_feature_names)+1):
+        name, var = nmf(data, i, initial_feature_names)
+        names.append(name)
+        variance.append(var)
 
-    components = len(initial_feature_names)
-
-    names = nmf(data, components, initial_feature_names)
-    names = list(dict.fromkeys(names))
-
-    print(len(names), names)
-
-    # interpret_results(initial_feature_names, 'results/SVD_results_49.xlsx', names)
+    interpret_results(initial_feature_names, 'results/NMF_results_49.xlsx', names, variance)
 
 
 main()
