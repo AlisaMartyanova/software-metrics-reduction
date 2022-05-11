@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from operator import itemgetter
 from openpyxl import load_workbook
+from sklearn import preprocessing
 
 global or_dist_sum, dist_or_matrix
 
@@ -58,7 +59,6 @@ class Particle:
                 self.position[i] = bounds[i][0]
 
 
-# Particle Swarm Optimization for feature selection
 class PSO:
     def __init__(self, func, original, bounds, num_particles, maxiter, select_num):
 
@@ -75,6 +75,8 @@ class PSO:
         # begin optimization loop
         i = 0
         while i < maxiter:
+            # print('iteration: ', i)
+            # print i,err_best_g
             # cycle through particles in swarm and evaluate fitness
             for j in range(num_particles):
                 swarm[j].evaluate(func, original, select_num)
@@ -97,7 +99,7 @@ class PSO:
         rslt.sort()
         return {
             'features_num': self.select_num,
-            'features_idxs': rslt,
+            'features_idxs': rslt.tolist(),
             'error': self.err_best_g
         }
 
@@ -111,7 +113,6 @@ def sammon_error(projected):
     return (1 / or_dist_sum) * diff_sum
 
 
-# select particular features from original dataset
 def project_position(original, position, select_num):
     position = np.array(position)
     sorted_index_arr = np.argsort(position)
@@ -141,16 +142,26 @@ def interpret_results(json_filename, data_filename, xlsx_filename):
     wb.save(xlsx_filename)
 
 
+# normalize the entire dataset using min-max scaler
+def normalize(dataset):
+    min_max_scaler = preprocessing.MinMaxScaler()
+    x_scaled = min_max_scaler.fit_transform(dataset)
+
+    return x_scaled
+
+
 def main():
-    data_filename = 'metrics.csv'
+    data_filename = '49.csv'
     iterations = 100
     population = 50
 
     # read the data, fill missing values with median and convert all to float
     data = pd.read_csv(data_filename)
-    data.fillna(data.median().round(1), inplace=True)
+    # data.fillna(data.median().round(1), inplace=True)
     for i in data:
         data[i] = data[i].astype(float)
+    # original = normalize(data)
+    # original.to_csv('normalized_49.csv')
     original = data.to_numpy()
 
     # calculate distance in original matrix
@@ -180,9 +191,10 @@ def main():
 
     res = sorted(res, key=itemgetter('error'))
 
-    with open('PSO_Sammon_results.json', 'w') as outfile:
+    with open('results/PSO_Sammon_results_49.json', 'w') as outfile:
         json.dump(res, outfile)
 
 
 main()
-interpret_results('PSO_Sammon_results.json', 'metrics.csv', 'PSO_Sammon_results.xlsx')
+interpret_results('results/PSO_Sammon_results_49.json', '49.csv', 'results/PSO_Sammon_results_49.xlsx')
+
