@@ -1,15 +1,19 @@
-from openpyxl import Workbook, load_workbook
+import xlsxwriter
+
 import pandas as pd
 import gen_algo
+workbook = xlsxwriter.Workbook('ga.xlsx')
+worksheet = workbook.add_worksheet()
 
-sheet_name = 'results.xlsx'
-wb = load_workbook(sheet_name)
-sheet = wb.active
-
-DATA = pd.read_csv('49.csv')
+DATA = pd.read_csv('51.csv')
 columns = list(DATA.columns)
 
-for i in range(1):
-    names = gen_algo.start(i)
+for i in range(len(columns)):
+    worksheet.write(i+1, 0, columns[i])
+for i in range(50):
+    names = list(gen_algo.start(i+1))
+    worksheet.write(0, i+1, i+1)
+    for j in range(len(names)):
+        worksheet.write(columns.index(names[j]), i+1, 1)
 
-    sheet.cell(i, 1, )
+workbook.close()

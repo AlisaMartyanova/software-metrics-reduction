@@ -6,10 +6,10 @@ import time
 from sklearn import preprocessing
 from sklearn.decomposition import TruncatedSVD
 
-NUM_POPULATION = 20
-NUM_SURVIVED = 0.65  # should be in range [0;1]
-NUM_CHILD = 10
-RATE_MUTATION = 0.05
+NUM_POPULATION = 100
+NUM_SURVIVED = 0.15  # should be in range [0;1]
+NUM_CHILD = 50
+RATE_MUTATION = 0.4
 BEST = 10
 
 DATA = pd.DataFrame()
@@ -28,8 +28,8 @@ def normalize(dataset):
 def euclidean_dist(a, b):
     d = 0
     for i in range(0, len(a)):
-        if math.isnan(a[i]) or math.isnan(b[i]):
-            continue
+        # if math.isnan(a[i]) or math.isnan(b[i]):
+        #     continue
         d += (a[i] - b[i]) ** 2
     return math.sqrt(d)
 
@@ -66,12 +66,14 @@ def selection(p):
     return p
 
 
-def get_names(df, index):
-    return df.columns[[index]]
+def get_names(index):
+    global DATA
+    return DATA.columns[index]
 
 
-def get_table(data, index):
-    return data.iloc[:, index]
+def get_table(index):
+    global DATA
+    return DATA.iloc[:, index]
 
 
 def gen_chr():
@@ -93,9 +95,9 @@ def get_indexes(chromosomes):
 
 def calc_fit_score(indexes):
     global DATA
-    table = get_table(DATA, indexes)
+    table = get_table(indexes)
     dist = get_dist_matrix(table.to_numpy())
-    return fit_function(dist, DIST)
+    return fit_function(DIST, dist)
 
 
 class Table:
@@ -127,21 +129,23 @@ class Table:
 def start(best):
     global DATA, N, DIST, BEST
     start_time = time.time()
-    DATA = pd.read_csv('49.csv')
+    DATA = pd.read_csv('51.csv')
     df = normalize(DATA)
+    columns = DATA.columns
+    DATA = pd.DataFrame(df, columns=columns)
     BEST = best
-    # df_ = df.to_numpy()
+    df_ = DATA.to_numpy()
     N = DATA.shape[1]
-    DIST = get_dist_matrix(df)
+    DIST = get_dist_matrix(df_)
 
     # dist_matrix = get_dist_matrix(df.to_numpy())
     p = [Table(gen_chr()) for _ in range(NUM_POPULATION)]
-    for i in range(100):
+    for i in range(250):
         p = selection(p)
-        if i % 10 == 0:
-            print(i, p[0].fit_score, len(get_names(DATA, p[0].indexes)))
+        # if i % 10 == 0:
+        #     print(i, p[0].fit_score, len(get_names(p[0].indexes)))
             # print(i, p[0].fit_score, get_names(DATA, p[0].indexes))
-            pass
+            # pass
         survived = p[:int(NUM_POPULATION * NUM_SURVIVED)]
         best_survived = p[:int(NUM_POPULATION * 0.3)]
         children = []
@@ -163,14 +167,16 @@ def start(best):
     p = selection(p)
     print("Error:", p[0].fit_score)
 
-    names = get_names(DATA, p[0].indexes)
+    print("Index:", p[0].indexes)
+    names = get_names(p[0].indexes)
     print("Total:", len(names), " vs ", N)
     for name in names:
         print(name)
     elapsed_time = time.time() - start_time
     print("TIME: ", elapsed_time)
+    print()
     return names
 
 
 if __name__ == "__main__":
-    start(30)
+    start(2)
